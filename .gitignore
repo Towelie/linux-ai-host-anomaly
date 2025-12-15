@@ -1,0 +1,71 @@
+# ======================
+# Secrets / Local Config
+# ======================
+.env
+.env.*
+!.env.example
+
+# ======================
+# Runtime Output / Logs
+# ======================
+*.log
+logs/
+*.out
+*.err
+
+# Collected host data (sensitive)
+*_facts.json
+ai_host_facts.json
+test_facts.json
+facts/
+output/
+
+# ======================
+# Python
+# ======================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# pip / build artifacts
+pip-wheel-metadata/
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# ======================
+# OS / Editor Noise
+# ======================
+.DS_Store
+Thumbs.db
+
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ======================
+# Temporary / IR Artifacts
+# ======================
+tmp/
+cache/
+*.tmp
+*.json
+
+# Core dumps
+core
+core.*
+
+# ======================
+# Shell
+# ======================
+*.bak
+*.old
