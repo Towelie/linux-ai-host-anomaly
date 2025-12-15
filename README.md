@@ -14,27 +14,32 @@ It is built for **incident response and threat triage**, not compliance, asset i
 
 ```mermaid
 flowchart TD
-    A[Linux host snapshot] --> B[High signal collection]
+    A[Linux host snapshot]
 
-    B --> B1[Processes root and long lived]
-    B --> B2[Network exposure listeners and sessions]
-    B --> B3[Persistence cron init rc]
-    B --> B4[Authentication SSH activity]
-    B --> B5[Artifacts tmp and shm]
-    B --> B6[Privilege uid0 sudo ssh keys]
+    A --> B1[Process collector]
+    A --> B2[Network collector]
+    A --> B3[Persistence collector]
+    A --> B4[Authentication collector]
+    A --> B5[Artifact collector]
+    A --> B6[Privilege collector]
 
-    B --> C[Normalization and chunking]
+    B1 --> C[Normalization and chunking]
+    B2 --> C
+    B3 --> C
+    B4 --> C
+    B5 --> C
+    B6 --> C
 
     C --> D[AI analysis engine]
 
     D --> D1[Infer expected baseline]
     D --> D2[Detect deviations]
-    D --> D3[Assess persistence and exposure]
+    D --> D3[Assess risk and confidence]
 
     D --> E[Verdict and findings JSON]
 ```
 
-The diagram is text-native, dark-mode safe, and constrained to syntax that GitHub’s Mermaid renderer supports reliably.
+The diagram reflects the actual data flow: **independent collectors feeding a shared normalization and chunking layer** before analysis.
 
 ---
 
