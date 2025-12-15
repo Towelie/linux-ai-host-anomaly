@@ -25,11 +25,11 @@ HostTriageAI helps answer that question by:
 
 ```mermaid
 flowchart TD
-    A[Linux host snapshot]
+    A[Linux host]
     B[Collectors]
     C[Normalization and chunking]
     D[AI analysis]
-    E[Findings JSON]
+    E[Findings]
 
     A --> B
     B --> C
