@@ -43,7 +43,7 @@ HostTriageAI helps by:
 
 ---
 
-## What is collected today
+## What is collected
 
 ### Execution and runtime
 - Root-owned processes
@@ -71,7 +71,7 @@ HostTriageAI helps by:
 
 ### Privilege
 - UID 0 users
-- sudoers and sudoers.d
+- Detection of recent sudoers changes and high-risk rules
 
 ### Artifacts
 - Executable files in `/tmp` and `/dev/shm`
