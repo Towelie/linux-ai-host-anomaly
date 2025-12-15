@@ -16,12 +16,12 @@ It is designed for **incident response, threat hunting, and first-look triage**,
 flowchart TD
     A[Linux Host Snapshot] --> B[High-Signal Collection]
 
-    B --> B1[Processes\n(root + long-lived)]
-    B --> B2[Network Exposure\n(listeners)]
-    B --> B3[Persistence\n(cron, init.d, rc.local)]
-    B --> B4[Authentication\nSSH success & failure]
-    B --> B5[Artifacts\n/tmp, /dev/shm executables]
-    B --> B6[Privilege\nuid0, sudoers, SSH keys]
+    B --> B1[Processes<br/>(root + long-lived)]
+    B --> B2[Network Exposure<br/>(listeners)]
+    B --> B3[Persistence<br/>(cron, init.d, rc.local)]
+    B --> B4[Authentication<br/>(SSH success & failure)]
+    B --> B5[Artifacts<br/>(/tmp, /dev/shm executables)]
+    B --> B6[Privilege<br/>(uid0, sudoers, SSH keys)]
 
     B --> C[Normalization & Chunking]
 
