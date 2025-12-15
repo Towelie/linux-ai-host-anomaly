@@ -1,119 +1,152 @@
 # HostTriageAI
 
-HostTriageAI is an AI-assisted Linux host forensic triage tool designed to help incident responders quickly determine whether a system shows signs of active or latent compromise.
+**AI-assisted Linux host triage using high-signal telemetry**
 
-Rather than acting as a scanner or EDR, HostTriageAI collects high-signal host telemetry (processes, network activity, persistence mechanisms, privilege indicators) and uses an LLM as an analyst to reason about control, exposure, and suspicious behavior in context.
+HostTriageAI collects **high-value, low-volume host data** from a Linux system and submits it to an AI model to answer a single operational question:
 
-The goal is not alert volume, but clear, defensible host-level judgments that help analysts decide what to escalate.
+> **Is there anything suspicious on this host right now?**
 
----
-
-## What HostTriageAI Is (and Is Not)
-
-HostTriageAI is:
-- A host-level forensic triage assistant
-- Focused on post-access and live control detection
-- Opinionated about severity and analyst usefulness
-- Designed for Linux, WSL, and container-adjacent environments
-
-HostTriageAI is not:
-- An EDR or prevention tool
-- A replacement for full forensic acquisition
-- A signature-based scanner
-- A real-time monitoring agent
+It is designed for **incident response, threat hunting, and first-look triage**, not compliance scanning, asset inventory, or generic hardening guidance.
 
 ---
 
-## How It Works
+## How it works (high level)
 
-1. A lightweight collector gathers high-value, low-noise host data:
-   - Processes (with privilege and longevity context)
-   - Network listeners and established outbound connections
-   - Shell- and interpreter-owned network activity
-   - Persistence mechanisms (cron, init scripts, rc.local)
-   - Privilege indicators (UID 0 users, sudoers state)
-   - Suspicious artifacts in writable locations (e.g. /tmp, /dev/shm)
-   - Authentication signals (successful and failed SSH activity)
+```mermaid
+flowchart TD
+    A[Linux Host Snapshot] --> B[High-Signal Collection]
 
-2. The collected facts are passed to an AI analyst prompt that:
-   - Infers likely normal baselines for the system
-   - Identifies deviations and control signals
-   - Distinguishes confirmed compromise from contextual risk
-   - Produces structured, analyst-ready findings
+    B --> B1[Processes\n(root + long-lived)]
+    B --> B2[Network Exposure\n(listeners)]
+    B --> B3[Persistence\n(cron, init.d, rc.local)]
+    B --> B4[Authentication\nSSH success & failure]
+    B --> B5[Artifacts\n/tmp, /dev/shm executables]
+    B --> B6[Privilege\nuid0, sudoers, SSH keys]
 
-3. Certain high-confidence signals (for example, shell-owned outbound connections)
-   are enforced as primary findings to prevent dilution or minimization.
+    B --> C[Normalization & Chunking]
 
----
+    C --> D[AI Analysis Engine]
 
-## Example Finding (Sanitized)
+    D --> D1[Infer likely baseline]
+    D --> D2[Detect deviations]
+    D --> D3[Assess persistence & exposure]
 
-Example output excerpt (sanitized, representative only):
+    D --> E[Verdict + Findings (JSON)]
 
-Severity: high  
-Category: network  
+    E --> E1[Is host suspicious?]
+    E --> E2[Evidence]
+    E --> E3[Reasoning]
+    E --> E4[Actionable next steps]
+```
 
-Evidence:  
-An established outbound TCP connection from an interactive shell process
-to a remote IP and port.
-
-Reasoning:  
-An outbound connection owned by an interactive shell strongly indicates
-live command execution or a reverse shell. This represents active external
-control until disproven.
-
-Recommended next steps:
-1. Identify the process lineage (parent, ancestry, execution context)
-2. Inspect /proc metadata for the process
-3. Validate the remote endpoint and connection purpose
-4. Contain the host if required while preserving forensic state
+The diagram is text-native, dark-mode safe, and intentionally minimal to avoid visual noise.
 
 ---
 
-## Common Use Cases
+## Design goals
 
-- Validation of suspected host compromise
-- Rapid IR triage prior to full forensic acquisition
-- Developer workstation investigations
-- WSL and container-adjacent environment analysis
-- Post-breach host assessment
-- Confirmation of live command-and-control or reverse shells
+- **High signal, low volume**  
+  No full filesystem walks, no “collect everything and hope.”
 
----
+- **IR-first thinking**  
+  Persistence, authentication, execution, privilege, and exposure take priority.
 
-## Output Philosophy
+- **Baseline inferred, not assumed**  
+  The AI infers what “normal” should look like for the host instead of trusting the current state.
 
-HostTriageAI is intentionally conservative with severity:
+- **Human-verifiable output**  
+  Every finding includes concrete evidence and explicit follow-up actions.
 
-- High — strong indicators of active control or confirmed compromise
-- Medium — credible persistence or exposure risks requiring review
-- Low — contextual signals worth awareness, not escalation
-
-The tool is designed to avoid both false reassurance and unnecessary alarm.
+- **Theme-safe documentation**  
+  No raster images, no fixed colors, no margin or clipping issues.
 
 ---
 
-## Disclaimer
+## What is collected (intentionally limited)
 
-This tool is provided for defensive security and incident response purposes only.
+### Execution & runtime
+- Root processes
+- Long-lived processes
+- Network listeners with process context
 
-All findings should be validated through additional investigation and corroborating evidence.
-HostTriageAI provides triage and judgment support, not final attribution or root cause analysis.
+### Persistence
+- System cron (`/etc/crontab`, `/etc/cron.*`)
+- User crontabs
+- `init.d` scripts
+- `rc.local`
+- Cron-executed script inspection (path, owner, hash, header)
+
+### Authentication & access (IR-grade)
+- Last successful logins
+- Failed authentication attempts
+- Successful SSH logins
+- Current interactive sessions (`who`, `w`)
+- SSH daemon authentication configuration
+- Authorized SSH keys (hash + header only)
+
+### Privilege
+- UID 0 accounts
+- Sudoers files (hash only)
+
+### Artifacts
+- Executable files in `/tmp` and `/dev/shm`
+- Suspicious writable locations commonly abused for staging
 
 ---
 
-## License
+## What this tool is not
 
-GNU General Public License v3.0 (GPL-3.0)
+- Not a compliance scanner  
+- Not a vulnerability scanner  
+- Not a full EDR replacement  
+- Not a “trust the host” auditor  
+
+HostTriageAI assumes the host **may already be compromised**.
 
 ---
 
-## Project Status
+## Output
 
-Active development, with emphasis on:
-- Detection correctness
-- Analyst usability
-- Disciplined severity handling
-- Avoidance of alert noise and hype-driven conclusions
+The analyzer produces **structured JSON**, designed for both humans and automation:
 
-Security-focused feedback and contributions are welcome.
+```json
+{
+  "verdict": {
+    "suspicious": true,
+    "confidence": 78,
+    "why": "Persistent cron execution from a cross-filesystem path"
+  },
+  "top_findings": [
+    {
+      "severity": "high",
+      "category": "persistence",
+      "evidence": "Cron job executes /mnt/e/fetch_news_vector.py",
+      "why_suspicious": "Persistence via cross-OS trust boundary",
+      "most_likely_benign": "User automation task",
+      "what_to_do_next": [
+        "sha256sum /mnt/e/fetch_news_vector.py",
+        "review script contents",
+        "confirm business justification"
+      ]
+    }
+  ]
+}
+```
+
+---
+
+## Intended use cases
+
+- Incident response triage
+- Threat hunting
+- Suspicious host validation
+- Cloud and ephemeral host inspection
+- WSL and developer workstation abuse detection
+
+---
+
+## Philosophy
+
+> **Don’t collect everything. Collect what attackers can’t hide.**
+
+HostTriageAI is built to surface meaningful deviations, not drown analysts in data.
