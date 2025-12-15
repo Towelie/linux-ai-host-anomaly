@@ -15,31 +15,20 @@ It is built for **incident response and threat triage**, not compliance, asset i
 ```mermaid
 flowchart TD
     A[Linux host snapshot]
+    B[Parallel collectors]
+    C[Normalization and chunking]
+    D[AI analysis engine]
+    E[Verdict and findings JSON]
 
-    A --> B1[Process collector]
-    A --> B2[Network collector]
-    A --> B3[Persistence collector]
-    A --> B4[Authentication collector]
-    A --> B5[Artifact collector]
-    A --> B6[Privilege collector]
-
-    B1 --> C[Normalization and chunking]
-    B2 --> C
-    B3 --> C
-    B4 --> C
-    B5 --> C
-    B6 --> C
-
-    C --> D[AI analysis engine]
-
-    D --> D1[Infer expected baseline]
-    D --> D2[Detect deviations]
-    D --> D3[Assess risk and confidence]
-
-    D --> E[Verdict and findings JSON]
+    A --> B
+    B --> C
+    C --> D
+    D --> E
 ```
 
-The diagram reflects the actual data flow: **independent collectors feeding a shared normalization and chunking layer** before analysis.
+**Parallel collectors include**: processes, network activity, persistence mechanisms, authentication activity, privilege state, and suspicious artifacts.
+
+The diagram reflects the real flow while avoiding unnecessary visual complexity.
 
 ---
 
