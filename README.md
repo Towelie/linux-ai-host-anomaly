@@ -2,95 +2,86 @@
 
 **AI-assisted Linux host triage using high-signal telemetry**
 
-HostTriageAI collects **high-value, low-volume host data** from a Linux system and submits it to an AI model to answer a single operational question:
+HostTriageAI collects high-value, low-volume telemetry from a Linux host and submits it to an AI model to answer one operational question:
 
 > **Is there anything suspicious on this host right now?**
 
-It is designed for **incident response, threat hunting, and first-look triage**, not compliance scanning, asset inventory, or generic hardening guidance.
+It is built for **incident response and threat triage**, not compliance, asset inventory, or generic hardening.
 
 ---
 
-## How it works (high level)
+## How it works
 
 ```mermaid
 flowchart TD
-    A[Linux Host Snapshot] --> B[High-Signal Collection]
+    A[Linux host snapshot] --> B[High signal collection]
 
-    B --> B1[Processes<br/>(root + long-lived)]
-    B --> B2[Network Exposure<br/>(listeners)]
-    B --> B3[Persistence<br/>(cron, init.d, rc.local)]
-    B --> B4[Authentication<br/>(SSH success & failure)]
-    B --> B5[Artifacts<br/>(/tmp, /dev/shm executables)]
-    B --> B6[Privilege<br/>(uid0, sudoers, SSH keys)]
+    B --> B1[Processes root and long lived]
+    B --> B2[Network exposure listeners and sessions]
+    B --> B3[Persistence cron init rc]
+    B --> B4[Authentication SSH activity]
+    B --> B5[Artifacts tmp and shm]
+    B --> B6[Privilege uid0 sudo ssh keys]
 
-    B --> C[Normalization & Chunking]
+    B --> C[Normalization and chunking]
 
-    C --> D[AI Analysis Engine]
+    C --> D[AI analysis engine]
 
-    D --> D1[Infer likely baseline]
+    D --> D1[Infer expected baseline]
     D --> D2[Detect deviations]
-    D --> D3[Assess persistence & exposure]
+    D --> D3[Assess persistence and exposure]
 
-    D --> E[Verdict + Findings (JSON)]
-
-    E --> E1[Is host suspicious?]
-    E --> E2[Evidence]
-    E --> E3[Reasoning]
-    E --> E4[Actionable next steps]
+    D --> E[Verdict and findings JSON]
 ```
 
-The diagram is text-native, dark-mode safe, and intentionally minimal to avoid visual noise.
+The diagram is text-native, dark-mode safe, and constrained to syntax that GitHub’s Mermaid renderer supports reliably.
 
 ---
 
 ## Design goals
 
 - **High signal, low volume**  
-  No full filesystem walks, no “collect everything and hope.”
+  No full filesystem walks and no bulk log ingestion.
 
-- **IR-first thinking**  
-  Persistence, authentication, execution, privilege, and exposure take priority.
+- **IR-first focus**  
+  Persistence, execution, privilege, authentication, and network activity take priority.
 
 - **Baseline inferred, not assumed**  
-  The AI infers what “normal” should look like for the host instead of trusting the current state.
+  The AI infers what normal should look like for the host and context.
 
 - **Human-verifiable output**  
-  Every finding includes concrete evidence and explicit follow-up actions.
-
-- **Theme-safe documentation**  
-  No raster images, no fixed colors, no margin or clipping issues.
+  Every finding includes evidence, reasoning, and concrete next steps.
 
 ---
 
-## What is collected (intentionally limited)
+## What is collected
 
-### Execution & runtime
+### Execution and runtime
 - Root processes
 - Long-lived processes
-- Network listeners with process context
+- Network sockets with owning process
 
 ### Persistence
-- System cron (`/etc/crontab`, `/etc/cron.*`)
+- System cron and cron directories
 - User crontabs
-- `init.d` scripts
-- `rc.local`
-- Cron-executed script inspection (path, owner, hash, header)
+- init.d scripts
+- rc.local
 
-### Authentication & access (IR-grade)
+### Authentication and access
 - Last successful logins
 - Failed authentication attempts
 - Successful SSH logins
-- Current interactive sessions (`who`, `w`)
+- Current interactive sessions
 - SSH daemon authentication configuration
-- Authorized SSH keys (hash + header only)
+- Authorized SSH keys metadata
 
 ### Privilege
 - UID 0 accounts
-- Sudoers files (hash only)
+- Sudoers file hashes
 
 ### Artifacts
-- Executable files in `/tmp` and `/dev/shm`
-- Suspicious writable locations commonly abused for staging
+- Executable files in tmp and dev shm
+- Common writable staging locations
 
 ---
 
@@ -99,39 +90,33 @@ The diagram is text-native, dark-mode safe, and intentionally minimal to avoid v
 - Not a compliance scanner  
 - Not a vulnerability scanner  
 - Not a full EDR replacement  
-- Not a “trust the host” auditor  
+- Not a trust-based auditor  
 
 HostTriageAI assumes the host **may already be compromised**.
 
 ---
 
-## Output
+## Example finding (high-confidence suspicious)
 
-The analyzer produces **structured JSON**, designed for both humans and automation:
+The following is a **sanitized example** of a finding that should be treated as **active compromise until disproven**.
 
 ```json
 {
-  "verdict": {
-    "suspicious": true,
-    "confidence": 78,
-    "why": "Persistent cron execution from a cross-filesystem path"
-  },
-  "top_findings": [
-    {
-      "severity": "high",
-      "category": "persistence",
-      "evidence": "Cron job executes /mnt/e/fetch_news_vector.py",
-      "why_suspicious": "Persistence via cross-OS trust boundary",
-      "most_likely_benign": "User automation task",
-      "what_to_do_next": [
-        "sha256sum /mnt/e/fetch_news_vector.py",
-        "review script contents",
-        "confirm business justification"
-      ]
-    }
+  "severity": "high",
+  "category": "network",
+  "evidence": "Established outbound TCP connection owned by an interactive shell process with STDIN and STDOUT attached",
+  "reasoning": "An established outbound network connection directly owned by an interactive shell or interpreter is not normal for baseline Linux operation. This pattern strongly matches reverse shell or live command and control tradecraft and should be treated as an active compromise until conclusively disproven.",
+  "recommended_next_step": [
+    "Identify the process and its parent to determine execution origin",
+    "Inspect the process tree to confirm interactive control",
+    "Examine proc metadata to identify the executable and invocation context",
+    "Validate the remote endpoint and scope of exposure",
+    "Contain the process by isolating the host or pausing execution while preserving forensic evidence"
   ]
 }
 ```
+
+This class of finding should **override benign assumptions** and trigger immediate investigation.
 
 ---
 
@@ -141,12 +126,12 @@ The analyzer produces **structured JSON**, designed for both humans and automati
 - Threat hunting
 - Suspicious host validation
 - Cloud and ephemeral host inspection
-- WSL and developer workstation abuse detection
+- Developer workstation and WSL abuse detection
 
 ---
 
 ## Philosophy
 
-> **Don’t collect everything. Collect what attackers can’t hide.**
+> **Do not collect everything. Collect what attackers cannot hide.**
 
-HostTriageAI is built to surface meaningful deviations, not drown analysts in data.
+HostTriageAI is designed to surface meaningful deviations and high-confidence threat signals without drowning analysts in noise.
