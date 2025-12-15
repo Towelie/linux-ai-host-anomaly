@@ -86,11 +86,93 @@ All collectors run independently.
 
 ### Privilege
 - UID 0 users
-- sudoers and sudoers.d
+- sudoers and sudoers.d file hashes
 
 ### Artifacts
 - Executable files in `/tmp` and `/dev/shm`
 - Common attacker staging locations
+
+---
+
+## How to use this tool
+
+HostTriageAI is intended to be run **on-demand** when you need to quickly assess a host.
+
+### 1. Run the collector on the target host
+
+From the repository directory:
+
+```bash
+bash collect.sh ./host_facts.json
+```
+
+This generates a **single JSON snapshot** containing all collected telemetry.
+
+The collector:
+- Does **not** modify system state
+- Does **not** require systemd
+- Is safe to run on live systems
+- Intentionally limits output size
+
+---
+
+### 2. Run the analyzer locally
+
+Once the facts file is generated:
+
+```bash
+python3 analyze.py ./host_facts.json
+```
+
+The analyzer:
+- Normalizes and chunks the data
+- Sends it to the AI model
+- Outputs a **structured JSON assessment**
+
+You should redirect output to a file during investigations:
+
+```bash
+python3 analyze.py ./host_facts.json > findings.json
+```
+
+---
+
+### 3. Interpret the findings
+
+Each finding includes:
+
+- **severity**  
+  How urgently this should be investigated
+
+- **category**  
+  (network, persistence, execution, privilege, lateral_movement, etc.)
+
+- **evidence**  
+  Raw telemetry that triggered the finding
+
+- **reasoning**  
+  Why this matters from an attacker tradecraft perspective
+
+- **recommended_next_step**  
+  Concrete commands or actions for responders
+
+Findings are designed to be:
+- Readable by humans
+- Easy to paste into IR notes
+- Actionable without additional tooling
+
+---
+
+### 4. What to do with the output
+
+HostTriageAI is best used to support decisions such as:
+
+- Do we isolate this host?
+- Do we escalate to full forensic acquisition?
+- Is this behavior explainable or suspicious?
+- What should we investigate next?
+
+It is **not** intended to be the final authority — it is a **decision support tool**.
 
 ---
 
@@ -99,7 +181,7 @@ All collectors run independently.
 HostTriageAI is suited for **single-host, point-in-time inspection** where fast signal extraction matters more than historical depth.
 
 ### Incident response triage (early-stage, host-level)
-- Rapid assessment of a Linux host during suspected compromise
+- Rapid assessment during suspected compromise
 - Identify:
   - Active reverse shells
   - Unexpected listeners
@@ -108,7 +190,7 @@ HostTriageAI is suited for **single-host, point-in-time inspection** where fast 
 - Support **contain / escalate decisions**
 
 **Limitations:**  
-No memory analysis, no forensic timelines, no lateral movement detection.
+No memory analysis, no forensic timelines, no lateral movement attribution.
 
 ---
 
@@ -117,13 +199,7 @@ No memory analysis, no forensic timelines, no lateral movement detection.
   - “Is there an interactive shell with network access?”
   - “Is anything persisting that shouldn’t be?”
   - “Are temp directories used for execution?”
-- Useful when pivoting from:
-  - Network alerts
-  - Cloud control-plane events
-  - Partial EDR detections
-
-**Limitations:**  
-Not suitable for fleet-wide or statistical hunting.
+- Useful when pivoting from alerts with limited context
 
 ---
 
@@ -133,9 +209,6 @@ Not suitable for fleet-wide or statistical hunting.
   - CI runners
   - Jump boxes
 - Validate whether the host is doing **more than its intended role**
-
-**Limitations:**  
-Cannot determine dwell time or initial access vector.
 
 ---
 
@@ -148,24 +221,17 @@ Cannot determine dwell time or initial access vector.
   - Reverse shells
   - Execution from mounted external filesystems
 
-**Limitations:**  
-No enforcement or prevention; inspection only.
-
 ---
 
-### Post-alert enrichment (supporting tool)
-- Enrich alerts from:
-  - SIEM
-  - Firewall
-  - Cloud security tooling
-- Provide **host-level context** when alerts lack detail
+### Post-alert enrichment
+- Add host-level context to:
+  - SIEM alerts
+  - Firewall detections
+  - Cloud security events
 
 ---
 
 ## Example high-severity finding (sanitized)
-
-The example below uses the **exact output structure** produced by the analyzer.  
-Sensitive identifiers are intentionally redacted.
 
 ```json
 {
