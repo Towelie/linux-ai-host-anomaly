@@ -2,11 +2,22 @@
 
 **AI-assisted Linux host triage using high-signal telemetry**
 
-HostTriageAI collects high-value, low-volume telemetry from a Linux host and submits it to an AI model to answer one operational question:
+HostTriageAI performs **point-in-time inspection of a Linux host** and uses an AI model to assess whether there is **anything suspicious that warrants investigation**.
 
-> **Is there anything suspicious on this host right now?**
+The tool is designed to support **incident response and security triage**, not continuous monitoring, compliance auditing, or fleet-wide analytics.
 
-It is designed for **incident response, threat triage, and hostile-environment validation**, not compliance, asset inventory, or generic hardening.
+---
+
+## What problem this solves
+
+During investigations, responders often need to answer a simple but critical question quickly:
+
+> **Does this host show signs of compromise or unsafe behavior right now?**
+
+HostTriageAI helps answer that question by:
+- Collecting **high-value, low-volume telemetry**
+- Inferring a **likely baseline** for the host
+- Highlighting **deviations that matter for IR**
 
 ---
 
@@ -15,10 +26,10 @@ It is designed for **incident response, threat triage, and hostile-environment v
 ```mermaid
 flowchart TD
     A[Linux host snapshot]
-    B[Parallel collectors]
+    B[Collectors]
     C[Normalization and chunking]
-    D[AI analysis engine]
-    E[Verdict and findings JSON]
+    D[AI analysis]
+    E[Findings JSON]
 
     A --> B
     B --> C
@@ -27,54 +38,55 @@ flowchart TD
 ```
 
 All collectors run independently.  
-**Normalization and chunking happen after collection for all signals**, not just “high-risk” ones.
+**Normalization and chunking are applied uniformly to all collected signals** before analysis.
 
 ---
 
-## Design goals
+## Design principles
 
-- **High signal, low volume**
-  Focus on telemetry attackers cannot easily hide.
+- **High signal over completeness**  
+  Focus on telemetry attackers rely on and struggle to fully hide.
 
-- **IR-first**
-  Persistence, execution, privilege, authentication, and network activity take priority.
+- **Assume uncertainty**  
+  The analyzer does not assume the host is benign.
 
-- **Baseline inferred, not assumed**
-  The AI infers what *normal* looks like for the host and context.
+- **Baseline inferred, not pre-defined**  
+  The AI infers what “normal” likely looks like for the host context.
 
-- **Human-verifiable**
-  Every finding includes raw evidence, reasoning, and concrete next steps.
+- **Human-verifiable output**  
+  Every finding includes evidence, reasoning, and concrete next steps.
 
 ---
 
-## What is collected
+## What is collected today
 
 ### Execution and runtime
 - Root-owned processes
 - Long-lived processes
-- Process-backed network sockets
+- Process command lines and arguments
 
 ### Network
 - Listening sockets
-- Established connections with owning PID and FD context
+- Established connections
+- Owning process and file descriptor context
 
 ### Persistence
 - System crontab and cron directories
 - User crontabs
-- init.d scripts
-- rc.local metadata
+- `/etc/init.d` scripts
+- `rc.local` metadata (if present)
 
 ### Authentication and access
-- Last successful logins
+- Last successful login sessions
 - Failed authentication attempts
 - SSH login history
 - Active sessions
-- SSH daemon configuration
+- SSH daemon configuration (metadata)
 - Authorized SSH key metadata
 
 ### Privilege
 - UID 0 users
-- sudoers and sudoers.d hashes
+- sudoers and sudoers.d file hashes
 
 ### Artifacts
 - Executable files in `/tmp` and `/dev/shm`
@@ -82,21 +94,78 @@ All collectors run independently.
 
 ---
 
-## What this tool is not
+## Intended use cases (realistic)
 
-- Not a vulnerability scanner  
-- Not a compliance scanner  
-- Not an EDR replacement  
-- Not a trust-based auditor  
+HostTriageAI is suited for **single-host, point-in-time inspection** where fast signal extraction matters more than historical depth.
 
-HostTriageAI **assumes compromise is possible** until evidence says otherwise.
+### Incident response triage (early-stage, host-level)
+- Rapid assessment of a Linux host during suspected compromise
+- Identify:
+  - Active reverse shells
+  - Unexpected listeners
+  - Suspicious long-lived processes
+  - Persistence mechanisms
+- Support **contain / escalate decisions**
+
+**Limitations:**  
+No memory analysis, no forensic timelines, no lateral movement detection.
 
 ---
 
-## Example finding (high severity)
+### Threat hunting (hypothesis-driven, single host)
+- Validate focused questions such as:
+  - “Is there an interactive shell with network access?”
+  - “Is anything persisting that shouldn’t be?”
+  - “Are temp directories used for execution?”
+- Useful when pivoting from:
+  - Network alerts
+  - Cloud control-plane events
+  - Partial EDR detections
 
-The example below is **intentionally realistic** and uses the **exact output structure** produced by the analyzer.  
-Sensitive identifiers are redacted.
+**Limitations:**  
+Not suitable for fleet-wide or statistical hunting.
+
+---
+
+### Suspicious host validation (cloud and ephemeral systems)
+- Inspect short-lived or purpose-built systems:
+  - Cloud instances
+  - CI runners
+  - Jump boxes
+- Validate whether the host is doing **more than its intended role**
+
+**Limitations:**  
+Cannot determine dwell time or initial access vector.
+
+---
+
+### Developer workstation and WSL inspection
+- Identify misuse of:
+  - WSL instances
+  - Developer machines running server-like services
+- Detect:
+  - Unsafe persistence
+  - Reverse shells
+  - Execution from mounted external filesystems
+
+**Limitations:**  
+No enforcement or prevention; inspection only.
+
+---
+
+### Post-alert enrichment (supporting tool)
+- Enrich alerts from:
+  - SIEM
+  - Firewall
+  - Cloud security tooling
+- Provide **host-level context** when alerts lack detail
+
+---
+
+## Example high-severity finding (sanitized)
+
+The example below uses the **exact output structure** produced by the analyzer.  
+Sensitive identifiers are intentionally redacted.
 
 ```json
 {
@@ -116,18 +185,20 @@ This class of finding should **override benign assumptions** and trigger immedia
 
 ---
 
-## Intended use cases
+## What this tool is not
 
-- Incident response triage
-- Threat hunting
-- Suspicious host validation
-- Cloud and ephemeral host inspection
-- Developer workstation and WSL abuse detection
+- Not a vulnerability scanner
+- Not a compliance or policy tool
+- Not an EDR replacement
+- Not a fleet monitoring solution
+
+HostTriageAI is intentionally **narrow and focused**.
 
 ---
 
 ## Philosophy
 
-> **Do not collect everything. Collect what attackers cannot hide.**
+> **Collect what attackers cannot easily hide.  
+> Analyze for meaning, not volume.**
 
-HostTriageAI is designed to surface **meaningful deviations** and **high-confidence threat signals** without drowning analysts in noise.
+HostTriageAI exists to help responders make **better decisions faster**, not to replace deep forensic workflows.
