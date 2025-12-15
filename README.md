@@ -185,12 +185,12 @@ This class of finding should **override benign assumptions** and trigger immedia
 
 ---
 
-## What this tool is not
+## This tool is not
 
-- Not a vulnerability scanner
-- Not a compliance or policy tool
-- Not an EDR replacement
-- Not a fleet monitoring solution
+- A vulnerability scanner
+- A compliance or policy tool
+- An EDR replacement
+- A fleet monitoring solution
 
 HostTriageAI is intentionally **narrow and focused**.
 
