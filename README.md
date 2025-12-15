@@ -4,11 +4,6 @@
 
 HostTriageAI performs **point-in-time inspection of a Linux host** and uses an AI model to assess whether there is **anything suspicious that warrants investigation**.
 
-The tool is designed to support **incident response and security triage**, not continuous monitoring, compliance auditing, or fleet-wide analytics.
-
----
-
-## What problem this solves
 In an ever-changing threat landscape, defenders are no longer just responding to known malware families or static indicators. Attackers increasingly blend into normal system behavior, abuse legitimate tooling, and experiment with AI-assisted tradecraft that does not yet have signatures or names. Traditional detection alone is often insufficient to explain why something matters or what to do next.
 
 This project is designed to bridge that gap. It combines deterministic, policy-driven detection for high-confidence kill-chain events with analyst-grade AI reasoning that explains context, prioritizes risk, and provides concrete investigation steps. Rather than replacing security judgment, it augments it — turning raw host telemetry into actionable incident response insight, even for novel or previously unseen techniques.
