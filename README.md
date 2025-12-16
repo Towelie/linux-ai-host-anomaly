@@ -220,37 +220,49 @@ No memory analysis, no forensic timelines, no lateral movement attribution.
 
 ## Example high-severity finding (sanitized)
 ```json
+{
+  "overall_assessment": "likely_compromised",
+  "confidence": 0.9,
+  "context_summary": [
+    "The host is running Ubuntu 20.04 LTS under WSL2 in a Windows-based environment.",
+    "A local user is present and has an interactive shell running.",
+    "There are numerous Python package files and development artifacts in temporary and user directories, indicating use for software development or data science.",
+    "System packages and scheduled jobs (cron) appear typical for an Ubuntu system with routine updates and maintenance tasks.",
+    "Service-related software such as container tooling, SSH, DNS, auditing, and logging services are installed, consistent with a development or test environment."
+  ],
+  "high_risk_indicators": [
+    "Shell interpreter owns an established outbound TCP connection",
+    "Outbound connection bound to interactive stdin/stdout file descriptors"
+  ],
+  "findings": [
     {
-      "overall_assessment": "likely_compromised",
-      "confidence": 1.0,
-      "context_summary": [
-        "The host is running Ubuntu 20.04 LTS under WSL2 on a Windows environment.",
-        "The system has many standard packages installed, including container tooling and audit frameworks.",
-        "A local user is active and running interactive shell sessions.",
-        "There is a user-level cron job running a Python script on a recurring two-hour schedule.",
-        "Network listeners include a DNS service bound to a private address.",
-        "The system uses SSH with password authentication disabled, indicating key-based access.",
-        "The /tmp directory contains numerous user files consistent with Python package artifacts and development activity.",
-        "No unusual system-level persistence mechanisms were detected."
-      ],
-      "high_risk_indicators": [
-        "Shell interpreter owns an established outbound TCP connection",
-        "Outbound connection bound to interactive stdin/stdout file descriptors"
-      ],
-      "findings": [
-        {
-          "severity": "high",
-          "category": "network",
-          "evidence": "tcp 0 0 192.0.2.10:54321 198.51.100.25:9003 users:((\"sh\",pid=1234,fd=2),(\"sh\",pid=1234,fd=1),(\"sh\",pid=1234,fd=0))",
-          "reasoning": "An established outbound network connection is owned directly by a shell interpreter process. Interactive shells do not normally maintain persistent outbound connections. The presence of interactive file descriptors strongly aligns with reverse shell or live command-and-control tradecraft.",
-          "recommended_next_step": "Identify the process tree, confirm socket ownership, contain the host, and preserve forensic state."
-        }
-      ],
-      "verdict": {
-        "suspicious": true,
-        "why": "The system exhibits an active outbound TCP connection owned by a shell interpreter with interactive file descriptors, strongly suggesting live remote control."
-      }
+      "severity": "high",
+      "category": "network",
+      "evidence": "An established outbound TCP connection from a shell process (pid 1234, command 'sh -i') from local address 192.0.2.10:54321 to remote address 198.51.100.25:9003.",
+      "reasoning": "A shell process with interactive input/output ('sh -i') maintaining an established outbound network connection is highly abnormal for a standard Linux host and is indicative of an active reverse shell or command-and-control (C2) channel. Such behavior is not expected during normal system operation. The connection uses the shell’s standard input/output file descriptors, demonstrating direct network interaction via the shell and strongly suggesting active compromise.",
+      "recommended_next_step": "Immediate investigation and containment are recommended. Isolate the host from the network, identify the origin of the shell process, and assess for lateral movement or data exfiltration."
+    },
+    {
+      "severity": "medium",
+      "category": "persistence",
+      "evidence": "A user-level cron job runs every two hours: '0 */2 * * * python3 /mnt/shared/example_task.py'.",
+      "reasoning": "User cron jobs can be legitimate, but recurring scheduled execution of custom scripts can also be used for persistence. Given the presence of an active outbound shell connection, this cron job warrants review to confirm legitimacy and ensure it is not being abused for persistence or follow-on activity.",
+      "recommended_next_step": "Review the contents of /mnt/shared/example_task.py for suspicious behavior or network activity and confirm the legitimacy of the cron job with the system owner."
+    },
+    {
+      "severity": "low",
+      "category": "filesystem",
+      "evidence": "The world-writable temporary directory (/tmp) contains multiple Python package files and user artifacts.",
+      "reasoning": "The presence of development artifacts and package files in /tmp is common in development or data science environments. No suspicious executables or unusual permission patterns were observed in temporary or memory-backed filesystems.",
+      "recommended_next_step": "No immediate action required. Continue monitoring for new or unusual files, especially executables appearing in temporary directories."
     }
+  ],
+  "_ai_original": {
+    "overall_assessment": "likely_compromised",
+    "confidence": 0.9
+  },
+  "telemetry_gaps": []
+}
 ```
 This class of finding should **override benign assumptions** and trigger immediate investigation.
 
