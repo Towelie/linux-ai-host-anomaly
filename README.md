@@ -219,7 +219,7 @@ No memory analysis, no forensic timelines, no lateral movement attribution.
 ---
 
 ## Example high-severity finding (sanitized)
-```
+```json
     {
       "overall_assessment": "likely_compromised",
       "confidence": 1.0,
