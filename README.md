@@ -18,7 +18,7 @@ flowchart TD
 
 ## Demo
 
-https://github.com/Towelie/HostTriageAI/blob/main/demo/HostTriageAI.mp4
+https://github.com/Towelie/HostTriageAI/issues/1#issue-3734113735
 
 
 **AI-assisted Linux host triage using high-signal telemetry**
