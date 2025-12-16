@@ -16,6 +16,11 @@ flowchart TD
     E --> F
 ```
 
+## Demo
+
+https://github.com/Towelie/HostTriageAI/blob/main/demo/HostTriageAI.mp4
+
+
 **AI-assisted Linux host triage using high-signal telemetry**
 
 Modern attackers blend into normal system behavior, abuse legitimate tools, and rely on techniques that evade traditional signatures. Detection often fails not because indicators are absent, but because tools cannot explain why something matters or what to do next.
