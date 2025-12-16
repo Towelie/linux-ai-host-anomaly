@@ -1,6 +1,6 @@
 # HostTriageAI
 
-\`\`\`mermaid
+```mermaid
 flowchart TD
     A[Linux host]
     B[Collectors]
@@ -14,7 +14,7 @@ flowchart TD
     C --> D
     D --> E
     E --> F
-\`\`\`
+```
 
 **AI-assisted Linux host triage using high-signal telemetry**
 
